@@ -71,7 +71,6 @@
   vars_files:
     - ./vars/vars.yaml
   tasks:
-
   - name:              Check if kubernetes was already initialized
     stat:
       path:            /etc/kubernetes/admin.conf
@@ -172,6 +171,8 @@
   - name:              Print token command
     debug:
       msg:             "{{ token_command.stdout }}"
+    when:              kube_initialized.stat.exists == False
+
 
 
 - hosts:               nodes
@@ -183,14 +184,21 @@
     shell:             "{{ hostvars[groups['master'][0]]['token_command']['stdout'] }}"
     when:              not hostvars[groups['master'][0]]['kube_initialized']['stat']['exists'] and skip_join is undefined
 
+
+
 - hosts:               master
   gather_facts:        no
   become:              yes
   become_user:         root
   tasks:
+  - name:              Untaint master
+    shell:             kubectl taint nodes --all node-role.kubernetes.io/master-
+    when:              untaint_master is not undefined
+
   - name:              Get kubectl config
     shell:             cat /etc/kubernetes/admin.conf
     register:          admin_config
+
   - name:              Print kubectl config
     debug:
       msg:             "{{ admin_config.stdout }}"
