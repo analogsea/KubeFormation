@@ -6,4 +6,3 @@ peer_ip: "10.22.0.5"
 peer_ip_2: "10.22.0.6"
 peer_asn: "65500"
 kube_asn: "65501"
-user: kubernetes
