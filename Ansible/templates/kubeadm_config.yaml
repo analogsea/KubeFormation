@@ -1,4 +1,8 @@
-apiVersion: kubeadm.k8s.io/v1beta2
+apiVersion: kubelet.config.k8s.io/v1beta1
+kind: KubeletConfiguration
+maxPods: 99999
+---
+apiVersion: kubeadm.k8s.io/v1beta1
 kind: ClusterConfiguration
 kubernetesVersion: v1.15.0
 networking:
@@ -8,9 +12,6 @@ networking:
 controllerManager:
   extraArgs:
     node-cidr-mask-size: "{{ kube_pod_cidr | ipaddr('prefix') }}"
-nodeRegistration:
-  kubeletExtraArgs:
-    max-pods: 99999
 apiServer:
   extraArgs:
     service-node-port-range: 1-60000
