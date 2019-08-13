@@ -1,0 +1,13 @@
+apiVersion: kubeadm.k8s.io/v1beta2
+kind: ClusterConfiguration
+kubernetesVersion: v1.15.0
+networking:
+  dnsDomain: cluster.local
+  podSubnet: "{{ kube_pod_cidr }}"
+  serviceSubnet: {{ kube_svc_cidr }}
+controllerManager:
+  extraArgs:
+    node-cidr-mask-size: "{{ kube_pod_cidr | ipaddr('prefix') }}"
+nodeRegistration:
+  kubeletExtraArgs:
+    max-pods: 99999

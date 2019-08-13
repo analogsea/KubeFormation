@@ -1,0 +1,196 @@
+---
+- hosts:               all
+  gather_facts:        no
+  become:              yes
+  become_user:         root
+  vars_files:
+    - ./vars/vars.yaml
+  tasks:
+  - name:              Prereqs
+    block:
+    - name:            Add docker keys
+      apt_key:
+        url:           https://download.docker.com/linux/ubuntu/gpg
+        state:         present
+
+    - name:            Add kubernetes keys
+      apt_key:
+        url:           https://packages.cloud.google.com/apt/doc/apt-key.gpg
+        state:         present
+
+    - name:            Add docker repo
+      apt_repository:
+        repo:          deb https://download.docker.com/linux/ubuntu xenial stable
+        state:         present
+
+    - name:            Add kubernetes repo
+      apt_repository:
+        repo:          deb http://apt.kubernetes.io/ kubernetes-xenial main
+        state:         present
+
+    - name:            Install prereqs
+      apt:
+        name:          "{{ packages }}"
+        force_apt_get: yes
+        update_cache:  yes
+      vars:
+        packages:
+          - apt-transport-https
+          - curl
+
+    - name:            Swap off
+      shell:           swapoff -a
+      args:
+        warn:          false
+
+    - name:            Install packages
+      apt:
+        name:          "{{ packages }}"
+        force_apt_get: yes
+        update_cache:  yes
+      vars:
+        packages:
+          - docker-ce
+          - kubelet=1.15.2-00
+          - kubeadm=1.15.2-00
+          - kubectl=1.15.2-00
+
+    - name:            Hold packages
+      shell:           apt-mark hold kubelet kubeadm kubectl
+
+    - name:            Pull images
+      shell:           kubeadm config images pull
+    when:              skip_prereqs is undefined
+
+
+
+- hosts:               master
+  gather_facts:        yes
+  become:              yes
+  become_user:         root
+  vars_files:
+    - ./vars/vars.yaml
+  tasks:
+
+  - name:              Check if kubernetes was already initialized
+    stat:
+      path:            /etc/kubernetes/admin.conf
+    register:          kube_initialized
+
+  - name:              Template kubeadm config
+    template:
+      src:             templates/kubeadm_config.yaml
+      dest:            /etc/kubernetes/kubeadm_config.yaml
+    when:              kube_initialized.stat.exists == False
+
+  - name:              kubeadm init
+    shell:             kubeadm init --config=/etc/kubernetes/kubeadm_config.yaml --skip-token-print
+    when:              kube_initialized.stat.exists == False
+
+  - name:              Create kube folder for root
+    file:
+      path:            "{{ ansible_env.HOME}}/.kube"
+      state:           directory
+    when:              kube_initialized.stat.exists == False
+
+  - name:              Copy kube config for root
+    copy:
+      remote_src:      true
+      src:             /etc/kubernetes/admin.conf
+      dest:            "{{ ansible_env.HOME}}/.kube/config"
+      group:           root
+      owner:           root
+    when:              kube_initialized.stat.exists == False
+
+  - name:              Create kube folder for ssh user
+    file:
+      path:            "/home/{{ ansible_user}}/.kube"
+      state:           directory
+      mode:            '755'
+    when:              kube_initialized.stat.exists == False
+
+  - name:              Copy kube config for ssh user
+    copy:
+      remote_src:      true
+      src:             /etc/kubernetes/admin.conf
+      dest:            "/home/{{ ansible_user }}/.kube/config"
+      group:           "{{ ansible_user }}"
+      owner:           "{{ ansible_user }}"
+    when:              kube_initialized.stat.exists == False
+
+  - name:              Install calicoctl
+    get_url:
+      url:             https://github.com/projectcalico/calicoctl/releases/download/v3.8.0/calicoctl
+      dest:            /usr/local/bin
+      mode:            '755'
+
+  - name:              Create calico folder
+    file:
+      path:            "/etc/calico"
+      state:           directory
+
+  - name:              Template calico stuff
+    template:
+     src:              "{{item.src}}"
+     dest:             /etc/calico
+    with_items:
+      - { src:         'calico_bgpconfig_default.yaml'}
+      - { src:         'calico_bgppeer.yaml'}
+      - { src:         'calico_bgppeer2.yaml'}
+      - { src:         'calicoctl.cfg'}
+
+  - name:              Get calico
+    get_url:
+      url:             https://docs.projectcalico.org/v3.8/manifests/calico.yaml
+      dest:            /etc/calico/calico.yaml
+      force:           yes
+
+  - name:              Edit calico yaml
+    replace:
+      path:            /etc/calico/calico.yaml
+      regexp:          "192.168.0.0/16"
+      replace:         "{{ kube_pod_cidr }}"
+
+  - name:              Apply calico
+    shell:             kubectl apply -f /etc/calico/calico.yaml
+
+  - name:              Calico BGP
+    block:
+    - name:            Apply calico BGP yamls
+      shell:           calicoctl apply -f /etc/calico/calico_bgpconfig_default.yaml && calicoctl apply -f /etc/calico/calico_bgppeer.yaml && calicoctl apply -f /etc/calico/calico_bgppeer2.yaml
+
+    - name:            Patch Calico to advertise service IPs
+      shell:           |
+        kubectl patch ds -n kube-system calico-node --patch '{"spec": {"template": {"spec": {"containers": [{"name": "calico-node", "env": [{"name": "CALICO_ADVERTISE_CLUSTER_IPS", "value": "{{ kube_svc_cidr }}"}]}]}}}}'
+    when:              apply_BGP is not undefined
+
+  - name:              Get new token
+    shell:             kubeadm token create --print-join-command --ttl 1h
+    register:          token_command
+    when:              kube_initialized.stat.exists == False
+
+  - name:              Print token command
+    debug:
+      msg:             "{{ token_command.stdout }}"
+
+
+- hosts:               nodes
+  gather_facts:        no
+  become:              yes
+  become_user:         root
+  tasks:
+  - name:              Join cluster
+    shell:             "{{ hostvars[groups['master'][0]]['token_command']['stdout'] }}"
+    when:              not hostvars[groups['master'][0]]['kube_initialized']['stat']['exists'] and skip_join is undefined
+
+- hosts:               master
+  gather_facts:        no
+  become:              yes
+  become_user:         root
+  tasks:
+  - name:              Get kubectl config
+    shell:             cat /etc/kubernetes/admin.conf
+    register:          admin_config
+  - name:              Print kubectl config
+    debug:
+      msg:             "{{ admin_config.stdout }}"

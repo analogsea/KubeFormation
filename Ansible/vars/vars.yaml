@@ -1,0 +1,9 @@
+---
+kube_pod_cidr: "10.20.0.0/16"
+kube_svc_cidr: "10.21.0.0/16"
+peer_ip: "10.22.0.5"
+#set peer_ip_2 to the same as peer_ip if unused
+peer_ip_2: "10.22.0.6"
+peer_asn: "65500"
+kube_asn: "65501"
+user: kubernetes
