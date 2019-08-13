@@ -55,6 +55,20 @@
           - kubeadm=1.15.2-00
           - kubectl=1.15.2-00
 
+    - name: Change Dockerd to use the systemd cgroupdriver
+      lineinfile:
+        dest: /lib/systemd/system/docker.service
+        state: present
+        regexp: "^ExecStart=.*"
+        line: "ExecStart=/usr/bin/dockerd -H fd:// --containerd=/run/containerd/containerd.sock --exec-opt native.cgroupdriver=systemd"
+      register: cgroupdriver
+
+    - name: Restart docker
+      service:
+        name: docker
+        state: reloaded
+      when: cgroupdriver.changed
+
     - name:            Hold packages
       shell:           apt-mark hold kubelet kubeadm kubectl
 
