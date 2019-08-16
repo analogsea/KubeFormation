@@ -1,0 +1,7 @@
+openstack_compute_flavor_id = "string"
+openstack_image_id = "string"
+boot_drive_size = int
+node_storage_size = int
+num_worker_nodes = int
+openstack_keypair = "string"
+tenant_network = "string"
