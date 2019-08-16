@@ -43,6 +43,12 @@
       args:
         warn:          false
 
+    - name:            Swap off in fstab
+      replace:
+        path:          /etc/fstab
+        regexp:        '^(.+?\sswap\s+sw\s+.*)$'
+        replace:       '# \1'
+
     - name:            Install packages
       apt:
         name:          "{{ packages }}"
@@ -55,19 +61,19 @@
           - kubeadm=1.15.2-00
           - kubectl=1.15.2-00
 
-    - name: Change Dockerd to use the systemd cgroupdriver
+    - name:            Change Dockerd to use the systemd cgroupdriver
       lineinfile:
-        dest: /lib/systemd/system/docker.service
-        state: present
-        regexp: "^ExecStart=.*"
-        line: "ExecStart=/usr/bin/dockerd -H fd:// --containerd=/run/containerd/containerd.sock --exec-opt native.cgroupdriver=systemd"
-      register: cgroupdriver
+        dest:          /lib/systemd/system/docker.service
+        state:         present
+        regexp:        "^ExecStart=.*"
+        line:          "ExecStart=/usr/bin/dockerd -H fd:// --containerd=/run/containerd/containerd.sock --exec-opt native.cgroupdriver=systemd"
+      register:        cgroupdriver
 
-    - name: Restart docker
+    - name:            Restart docker
       service:
-        name: docker
-        state: reloaded
-      when: cgroupdriver.changed
+        name:          docker
+        state:         reloaded
+      when:            cgroupdriver.changed
 
     - name:            Hold packages
       shell:           apt-mark hold kubelet kubeadm kubectl docker-ce
