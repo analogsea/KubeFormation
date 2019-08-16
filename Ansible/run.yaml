@@ -191,7 +191,7 @@
   - name:              Print token command
     debug:
       msg:             "{{ token_command.stdout }}"
-    when:              kube_initialized.stat.exists == False
+    when:              kube_initialized.stat.exists == False and print_token is not undefined
 
 
 
