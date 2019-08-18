@@ -15,3 +15,4 @@ controllerManager:
 apiServer:
   extraArgs:
     service-node-port-range: 1-60000
+    feature-gates: "VolumeSnapshotDataSource=true"
