@@ -10,3 +10,6 @@
 
 # Ansible retry files
 *.retry
+
+# Ansible inventory file
+inventory.yaml
