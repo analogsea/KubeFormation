@@ -164,11 +164,17 @@
       dest:            /etc/calico/calico.yaml
       force:           yes
 
-  - name:              Edit calico yaml
+  - name:              Edit calico pod cidr
     replace:
       path:            /etc/calico/calico.yaml
       regexp:          "192.168.0.0/16"
       replace:         "{{ kube_pod_cidr }}"
+
+  - name:              Edit calico MTU
+    replace:
+      path:            /etc/calico/calico.yaml
+      regexp:          "veth_mtu.*"
+      replace:         'veth_mtu: "{{ calico_MTU }}"'
 
   - name:              Apply calico
     shell:             kubectl apply -f /etc/calico/calico.yaml
