@@ -173,6 +173,7 @@
   - name:              Edit calico MTU
     replace:
       path:            /etc/calico/calico.yaml
+      before:          "cni_network_config: \\|-"
       regexp:          "veth_mtu.*"
       replace:         'veth_mtu: "{{ calico_MTU }}"'
 
