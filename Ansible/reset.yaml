@@ -14,3 +14,6 @@
       iptables -F && iptables -t nat -F && iptables -t mangle -F && iptables -X
     args:
       warn: false
+  - name: Reboot after reset
+    reboot:
+      reboot_timeout: 3600
