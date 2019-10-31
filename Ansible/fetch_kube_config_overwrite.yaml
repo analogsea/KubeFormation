@@ -1,0 +1,22 @@
+---
+
+- hosts:        localhost
+  connection:   local
+  gather_facts: no
+  tasks:
+  - name:     Ensure .kube directory exists
+    file:
+      path:     "{{ lookup('env', 'HOME') }}/.kube/"
+      state:    directory
+      mode:     '775'
+
+- hosts:        master
+  gather_facts: no
+  become:       yes
+  become_user:  root
+  tasks:
+  - name:       Overwrite .kube/config
+    fetch:
+      src:      /root/.kube/config
+      dest:     "{{ lookup('env', 'HOME')}}/.kube/"
+      flat:     yes

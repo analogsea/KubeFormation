@@ -1,0 +1,57 @@
+---
+
+- hosts:         localhost
+  connection:    local
+  gather_facts:  no
+  tasks:
+  - name:        Ensure .kube directory exists
+    file:
+      path:      "{{ lookup('env', 'HOME') }}/.kube/"
+      state:     directory
+      mode:      '775'
+
+- hosts:         master
+  gather_facts:  no
+  become:        yes
+  become_user:   root
+  tasks:
+  - name:        Make temp directory to store new config
+    file:
+      path:      "{{ lookup('env', 'HOME') }}/.kube/new"
+      state:     directory
+      mode:      '644'
+
+  - name:        Fetch .kube/config
+    fetch:
+      src:       /root/.kube/config
+      dest:      "{{ lookup('env', 'HOME') }}/.kube/new/"
+      flat:      yes
+
+- hosts:         localhost
+  connection:    local
+  gather_facts:  no
+  tasks:
+  - name:        Edit config with template variables
+    replace:
+      path:      "{{ lookup('env', 'HOME') }}/.kube/new/config"
+      regexp:    "{{ item.regexp }}"
+      replace:   "{{ item.replace }}"
+    with_items:
+      - regexp: "name: kubernetes-admin@kubernetes$"
+        replace: "name: {{ context_name }}"
+      - regexp: "name: kubernetes$"
+        replace: "name: {{ cluster_name }}"
+      - regexp: "cluster: kubernetes$"
+        replace: "cluster: {{ cluster_name }}"
+      - regexp: "user: kubernetes-admin$"
+        replace: "user: {{ cluster_admin_username }}"
+      - regexp: "name: kubernetes-admin$"
+        replace: "name: {{ cluster_admin_username }}"
+
+  - name:        Merge kube configs
+    shell:       KUBECONFIG=~/.kube/config:~/.kube/new/config kubectl config view --flatten > ~/.kube/mergedkub && mv ~/.kube/mergedkub ~/.kube/config
+
+  - name:        Clean up temporary directory
+    file:
+      path:      "{{ lookup('env', 'HOME') }}/.kube/new"
+      state:     absent
