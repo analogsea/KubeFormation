@@ -9,7 +9,7 @@
     service:
       name:           docker
       state:          restarted
-  - name:             reset
+  - name:             Reset kubeadm
     shell:            |
       rm -rf /root/.kube
       rm -rf /var/lib/etcd
@@ -17,6 +17,19 @@
       iptables -F && iptables -t nat -F && iptables -t mangle -F && iptables -X
     args:
       warn:           false
+
+  - name: Unhold packages
+    dpkg_selections:
+      name: "{{ item }}"
+      selection: install
+    loop: "{{ packages|flatten(levels=1) }}"
+    vars:
+        packages:
+          - docker-ce
+          - kubelet
+          - kubeadm
+          - kubectl
+
   - name:             Reboot after reset
     reboot:
       reboot_timeout: 3600
