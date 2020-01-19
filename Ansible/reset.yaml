@@ -29,6 +29,7 @@
           - kubelet
           - kubeadm
           - kubectl
+    when: unhold is not undefined
 
   - name:             Reboot after reset
     reboot:
