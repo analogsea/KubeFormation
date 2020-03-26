@@ -6,7 +6,7 @@
     - ./vars/vars.yaml
   tasks:
   - name:             Restart docker service
-    service:
+    systemd:
       name:           docker
       state:          restarted
   - name:             Reset kubeadm

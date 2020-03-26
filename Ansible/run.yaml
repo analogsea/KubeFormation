@@ -56,10 +56,10 @@
         update_cache:  yes
       vars:
         packages:
-          - docker-ce=5:19.03.5~3-0~ubuntu-xenial
-          - kubelet=1.17.1-00
-          - kubeadm=1.17.1-00
-          - kubectl=1.17.1-00
+          - docker-ce=5:19.03.8~3-0~ubuntu-xenial
+          - kubelet=1.18.0-00
+          - kubeadm=1.18.0-00
+          - kubectl=1.18.0-00
 
     - name:            Change Dockerd to use the systemd cgroupdriver
       lineinfile:
@@ -69,10 +69,11 @@
         line:          "ExecStart=/usr/bin/dockerd -H fd:// --containerd=/run/containerd/containerd.sock --exec-opt native.cgroupdriver=systemd"
       register:        cgroupdriver
 
-    - name:            Restart docker
-      service:
+    - name:            Reload docker
+      systemd:
         name:          docker
-        state:         reloaded
+        state:         restarted
+        daemon_reload: yes
       when:            cgroupdriver.changed
 
     - name: Hold packages
@@ -168,8 +169,9 @@
       - { src:         'calicoctl.cfg'}
 
   - name:              Get calico
-    get_url:
-      url:             https://docs.projectcalico.org/v3.11/manifests/calico.yaml
+    copy:
+      #url:             https://docs.projectcalico.org/v3.11/manifests/calico.yaml
+      src:  manifests/calico.yaml
       dest:            /etc/calico/calico.yaml
       force:           yes
 
