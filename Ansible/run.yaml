@@ -76,11 +76,11 @@
         daemon_reload: yes
       when:            cgroupdriver.changed
 
-    - name: Hold packages
+    - name:            Hold packages
       dpkg_selections:
-        name: "{{ item }}"
-        selection: hold
-      loop: "{{ packages|flatten(levels=1) }}"
+        name:          "{{ item }}"
+        selection:     hold
+      loop:            "{{ packages|flatten(levels=1) }}"
       vars:
           packages:
             - docker-ce
@@ -170,8 +170,8 @@
 
   - name:              Get calico
     copy:
-      #url:             https://docs.projectcalico.org/v3.11/manifests/calico.yaml
-      src:  manifests/calico.yaml
+      #url:            https://docs.projectcalico.org/v3.11/manifests/calico.yaml
+      src:             manifests/calico.yaml
       dest:            /etc/calico/calico.yaml
       force:           yes
 
