@@ -1,0 +1,28 @@
+---
+- hosts:               all
+  gather_facts:        no
+  become:              yes
+  become_user:         root
+  vars_files:
+    - ./vars/vars.yaml
+  tasks:
+  - name:              Prereqs
+    block:
+    - name:            Add ceph keys
+      apt_key:
+        url:           https://download.ceph.com/keys/release.asc
+        state:         present
+
+    - name:            Add ceph repo
+      apt_repository:
+        repo:          deb https://download.ceph.com/debian-nautilus/ bionic main
+        state:         present
+
+    - name:            Install prereqs
+      apt:
+        name:          "{{ packages }}"
+        force_apt_get: yes
+        update_cache:  yes
+      vars:
+        packages:
+          - ceph-common
