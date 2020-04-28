@@ -1,6 +1,7 @@
 apiVersion: kubelet.config.k8s.io/v1beta1
 kind: KubeletConfiguration
 maxPods: 99999
+cgroupDriver: "systemd"
 ---
 apiVersion: kubeadm.k8s.io/v1beta2
 kind: ClusterConfiguration
@@ -13,6 +14,8 @@ controllerManager:
   extraArgs:
     node-cidr-mask-size: "{{ kube_pod_cidr | ipaddr('prefix') }}"
 apiServer:
+  certSANs:
+  - "{{ groups['master'][0] }}"
   extraArgs:
     service-node-port-range: 1-60000
     feature-gates: "VolumeSnapshotDataSource=true,VolumePVCDataSource=true"
