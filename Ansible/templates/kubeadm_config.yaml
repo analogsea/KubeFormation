@@ -16,6 +16,7 @@ controllerManager:
 apiServer:
   certSANs:
   - "{{ groups['master'][0] }}"
+  - "analogsea.ca"
   extraArgs:
     service-node-port-range: 1-60000
     feature-gates: "VolumeSnapshotDataSource=true,VolumePVCDataSource=true"
